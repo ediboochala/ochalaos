@@ -75,17 +75,15 @@ export default function ReviewPage() {
     const empty = QUESTIONS.every(q => q.fields.every(f => !form[f.key].trim()));
     if (empty) { toast('Fill in at least one answer'); return; }
     const review = {
-      date:      new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-      workouts:  form.health ?? '',
-      sleep:     '',
-      nutrition: '',
-      create:    form.create ?? '',
-      learn:     form.learn ?? '',
-      outreach:  form.outreach ?? '',
-      posts:     '',
-      biz:       form.outreach ?? '',
-      short:     form.short ?? '',
-      next:      form.next ?? '',
+      date:     new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+      health:   form.health ?? '',
+      recovery: form.recovery ?? '',
+      create:   form.create ?? '',
+      learn:    form.learn ?? '',
+      goals:    form.goals ?? '',
+      outreach: form.outreach ?? '',
+      short:    form.short ?? '',
+      next:     form.next ?? '',
     };
     update({ reviews: [...state.reviews, review] });
     setSaved(true);
@@ -216,9 +214,11 @@ export default function ReviewPage() {
                 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{r.date}</div>
-                  {(r.create || r.learn) && (
+                  {(r.create || r.learn || r.goals) && (
                     <div className="text-xs col-muted" style={{ lineHeight: 1.55 }}>
-                      {r.create ? r.create.slice(0, 80) + (r.create.length > 80 ? '…' : '') : ''}
+                      {(r.create || r.goals || r.learn)
+                        ? (r.create || r.goals || r.learn).slice(0, 90) + ((r.create || r.goals || r.learn).length > 90 ? '…' : '')
+                        : ''}
                     </div>
                   )}
                 </div>

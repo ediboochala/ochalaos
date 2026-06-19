@@ -31,6 +31,12 @@ export default function ClientsPage() {
     update({ leads: next });
   };
 
+  const updateLeadStatus = (i: number, newStatus: Lead['status']) => {
+    const next = state.leads.map((l, idx) => idx === i ? { ...l, status: newStatus } : l);
+    update({ leads: next });
+    toast(`Status updated to ${newStatus}`);
+  };
+
   const counts = {
     lead:      state.leads.filter(l => l.status === 'lead').length,
     contacted: state.leads.filter(l => l.status === 'contacted').length,
@@ -113,9 +119,22 @@ export default function ClientsPage() {
                     <div className="or-name">{l.name}</div>
                     <div className="or-detail">Added {l.date}</div>
                   </div>
-                  <div className="or-status" style={{ background: STATUS_COLORS[l.status].bg, color: STATUS_COLORS[l.status].color }}>
-                    {l.status.charAt(0).toUpperCase() + l.status.slice(1)}
-                  </div>
+                  <select
+                    value={l.status}
+                    onChange={e => updateLeadStatus(i, e.target.value as Lead['status'])}
+                    style={{
+                      background: STATUS_COLORS[l.status].bg,
+                      color: STATUS_COLORS[l.status].color,
+                      border: 'none', borderRadius: 10, padding: '3px 8px',
+                      fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                      width: 'auto', alignSelf: 'center',
+                    }}
+                  >
+                    <option value="lead">Lead</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="convo">In Conversation</option>
+                    <option value="closed">Closed</option>
+                  </select>
                   <button onClick={() => removeLead(i)} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, padding: 4 }}>×</button>
                 </div>
               ))

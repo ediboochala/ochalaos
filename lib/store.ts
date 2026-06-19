@@ -69,14 +69,12 @@ export interface Session {
 
 export interface Review {
   date: string;
-  workouts: string;
-  sleep: string;
-  nutrition: string;
+  health: string;
+  recovery: string;
   create: string;
   learn: string;
+  goals: string;
   outreach: string;
-  posts: string;
-  biz: string;
   short: string;
   next: string;
 }

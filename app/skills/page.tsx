@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { useApp } from '@/lib/context';
-import { generateId } from '@/lib/store';
 
 const SKILL_COLORS = [
   'var(--accent2)', 'var(--teal)', 'var(--blue)',

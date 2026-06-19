@@ -85,7 +85,7 @@ export default function MilestonesPage() {
             <div className="font-sora" style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent2)' }}>
               {totalChecked}/{totalMilestones}
             </div>
-            <div className="text-xs col-muted mt-4">Phase 1 complete</div>
+            <div className="text-xs col-muted mt-4">{totalChecked === totalMilestones ? '✓ Phase 1 complete' : `Phase ${phase.num}: ${phase.label}`}</div>
           </div>
         </div>
         <div className="prog-track" style={{ height: 8 }}>
