@@ -1,6 +1,16 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, loadState, saveState, computeDay, todayKey } from './store';
+import { ACHIEVEMENTS, computeUnlocked } from './achievements';
+import { SOUNDS, SoundName } from './sound';
+
+export interface StopwatchState {
+  running: boolean;
+  elapsedMs: number;
+  laps: number[];
+}
+
+const STOPWATCH_TICK_MS = 100;
 
 interface Ctx {
   state: AppState;
@@ -10,6 +20,19 @@ interface Ctx {
   toastVisible: boolean;
   notifyPermission: NotificationPermission | 'unsupported';
   requestNotifyPermission: () => Promise<void>;
+
+  // Sound + celebration
+  playSound: (name: SoundName) => void;
+  celebrate: (msg?: string) => void;
+  confettiTrigger: number;
+
+  // Stopwatch (lifted to context so it keeps running across page navigation)
+  stopwatch: StopwatchState;
+  stopwatchStart: () => void;
+  stopwatchPause: () => void;
+  stopwatchReset: () => void;
+  stopwatchLap: () => void;
+  stopwatchLogSession: (label?: string) => void;
 }
 
 const AppCtx = createContext<Ctx | null>(null);
@@ -26,6 +49,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [notifyPermission, setNotifyPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
+  const [confettiTrigger, setConfettiTrigger] = useState(0);
+  const [stopwatch, setStopwatch] = useState<StopwatchState>({ running: false, elapsedMs: 0, laps: [] });
 
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
   // Tracks which notifications have already fired today to avoid duplicates
@@ -40,6 +65,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const day = computeDay(prev.startDate, prev.targetDuration);
       if (day === prev.day) return prev;
       const next = { ...prev, day };
+      saveState(next);
+      return next;
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Achievement catch-up on load: silently backfill anything already earned
+  // (e.g. an existing streak from before achievements existed) without a
+  // confetti storm. Genuine new unlocks are celebrated inside update().
+  useEffect(() => {
+    setState(prev => {
+      const earned = computeUnlocked(prev);
+      const missing = earned.filter(id => !prev.unlockedAchievements.includes(id));
+      if (missing.length === 0) return prev;
+      const next = { ...prev, unlockedAchievements: [...prev.unlockedAchievements, ...missing] };
       saveState(next);
       return next;
     });
@@ -100,10 +139,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [state.notifications, state.dailyTasks, state.pillars, state.customPillars]);
 
+  // ── Sound + celebration helpers ───────────────────────────────────────────
+  const playSound = useCallback((name: SoundName) => {
+    if (!state.notifications.sound) return;
+    SOUNDS[name]();
+  }, [state.notifications.sound]);
+
+  const toast = useCallback((msg: string, duration = 2500) => {
+    setToastMsg(msg);
+    setToastVisible(true);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastVisible(false), duration);
+  }, []);
+
+  const celebrate = useCallback((msg?: string) => {
+    setConfettiTrigger(t => t + 1);
+    if (msg) toast(msg, 4000);
+  }, [toast]);
+
   // ── Core update function ──────────────────────────────────────────────────
   const update = useCallback((patch: Partial<AppState>) => {
     setState(prev => {
-      const next = { ...prev, ...patch };
+      let next = { ...prev, ...patch };
 
       // Overwork detection: fires when sessions update crosses the threshold
       if (patch.sessions && next.notifications.overworkAlerts) {
@@ -130,16 +187,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Achievement unlocking: compare against what's already recorded and
+      // celebrate anything newly earned by this patch.
+      const earned = computeUnlocked(next);
+      const newlyUnlocked = earned.filter(id => !next.unlockedAchievements.includes(id));
+      if (newlyUnlocked.length > 0) {
+        next = { ...next, unlockedAchievements: [...next.unlockedAchievements, ...newlyUnlocked] };
+        setTimeout(() => {
+          const first = ACHIEVEMENTS.find(a => a.id === newlyUnlocked[0]);
+          const label = newlyUnlocked.length === 1
+            ? `🏆 Achievement unlocked: ${first?.name ?? ''}`
+            : `🏆 ${newlyUnlocked.length} achievements unlocked!`;
+          setToastMsg(label);
+          setToastVisible(true);
+          toastTimer.current = setTimeout(() => setToastVisible(false), 4000);
+          setConfettiTrigger(t => t + 1);
+          if (next.notifications.sound) SOUNDS.achievement();
+        }, 50);
+      }
+
       saveState(next);
       return next;
     });
-  }, []);
-
-  const toast = useCallback((msg: string, duration = 2500) => {
-    setToastMsg(msg);
-    setToastVisible(true);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastVisible(false), duration);
   }, []);
 
   const requestNotifyPermission = useCallback(async () => {
@@ -151,8 +220,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // ── Stopwatch (persists across page navigation, ephemeral per session) ───
+  useEffect(() => {
+    if (!stopwatch.running) return;
+    const iv = setInterval(() => {
+      setStopwatch(s => (s.running ? { ...s, elapsedMs: s.elapsedMs + STOPWATCH_TICK_MS } : s));
+    }, STOPWATCH_TICK_MS);
+    return () => clearInterval(iv);
+  }, [stopwatch.running]);
+
+  const stopwatchStart = useCallback(() => {
+    setStopwatch(s => (s.running ? s : { ...s, running: true }));
+  }, []);
+
+  const stopwatchPause = useCallback(() => {
+    setStopwatch(s => ({ ...s, running: false }));
+  }, []);
+
+  const stopwatchReset = useCallback(() => {
+    setStopwatch({ running: false, elapsedMs: 0, laps: [] });
+  }, []);
+
+  const stopwatchLap = useCallback(() => {
+    setStopwatch(s => (s.running ? { ...s, laps: [...s.laps, s.elapsedMs] } : s));
+  }, []);
+
+  const stopwatchLogSession = useCallback((label = 'Stopwatch session') => {
+    const mins = Math.max(1, Math.round(stopwatch.elapsedMs / 60000));
+    update({
+      sessions: [...state.sessions, { task: label, mins, date: todayKey() }],
+      stopwatchSessions: state.stopwatchSessions + 1,
+    });
+    setStopwatch({ running: false, elapsedMs: 0, laps: [] });
+    toast(`Logged ${mins} min session ✓`);
+  }, [stopwatch.elapsedMs, state.sessions, state.stopwatchSessions, update, toast]);
+
   return (
-    <AppCtx.Provider value={{ state, update, toast, toastMsg, toastVisible, notifyPermission, requestNotifyPermission }}>
+    <AppCtx.Provider
+      value={{
+        state, update, toast, toastMsg, toastVisible, notifyPermission, requestNotifyPermission,
+        playSound, celebrate, confettiTrigger,
+        stopwatch, stopwatchStart, stopwatchPause, stopwatchReset, stopwatchLap, stopwatchLogSession,
+      }}
+    >
       {children}
     </AppCtx.Provider>
   );

@@ -43,7 +43,7 @@ function useCount(target: number, duration = 800) {
 }
 
 export default function DashboardPage() {
-  const { state, update, toast } = useApp();
+  const { state, update, toast, playSound, celebrate } = useApp();
   const router = useRouter();
   const [qIdx, setQIdx] = useState(0);
   const [greeting, setGreeting] = useState('Good morning');
@@ -61,7 +61,11 @@ export default function DashboardPage() {
     const today = todayKey();
     const count = Object.values(next).filter(Boolean).length;
     update({ pillars: next, heatmap: { ...state.heatmap, [today]: count } });
-    if (!state.pillars[id]) toast('Pillar completed ✓');
+    if (!state.pillars[id]) {
+      const allDone = state.customPillars.length > 0 && state.customPillars.every(p => next[p.id]);
+      if (allDone) celebrate('🎉 Perfect day — every pillar complete!');
+      else { toast('Pillar completed ✓'); playSound('success'); }
+    }
   };
 
   const pillarsCompleted = state.customPillars.filter(p => state.pillars[p.id]).length;

@@ -10,7 +10,7 @@ declare global {
 }
 
 export default function FocusOverlay() {
-  const { state, update, toast } = useApp();
+  const { state, update, toast, playSound } = useApp();
   const [visible, setVisible] = useState(false);
   const [task, setTask] = useState('Deep Work');
   const [remaining, setRemaining] = useState(0);
@@ -29,9 +29,10 @@ export default function FocusOverlay() {
       const sess = { task, mins, date: todayKey() };
       update({ sessions: [...state.sessions, sess] });
       toast(`Session complete! ${mins} min logged ✓`);
+      playSound('complete');
       return 0;
     });
-  }, [total, task, state.sessions, update, toast]);
+  }, [total, task, state.sessions, update, toast, playSound]);
 
   // Keep ref in sync with latest end function
   useEffect(() => { endRef.current = end; }, [end]);

@@ -632,6 +632,17 @@ export default function SettingsPage() {
                     onClick={() => setNotif({ enabled: !n.enabled })}
                   />
                 </div>
+
+                <div className="setting-row">
+                  <div>
+                    <div className="setting-label">Sound effects</div>
+                    <div className="setting-desc">Play sounds for pillars, achievements &amp; the Arcade</div>
+                  </div>
+                  <div
+                    className={`toggle${n.sound ? ' on' : ''}`}
+                    onClick={() => setNotif({ sound: !n.sound })}
+                  />
+                </div>
               </div>
 
               <div className="card">
@@ -769,7 +780,8 @@ export default function SettingsPage() {
                 <div className="text-xs col-muted" style={{ lineHeight: 1.8 }}>
                   Runs fully offline in your browser using localStorage<br />
                   Day {state.day} of {state.targetDuration} · Streak: {state.streak} days<br />
-                  {state.goals.length} goals · {state.customPillars.length} pillars · {state.sessions.length} sessions logged
+                  {state.goals.length} goals · {state.customPillars.length} pillars · {state.sessions.length} sessions logged<br />
+                  {state.unlockedAchievements.length} achievements unlocked · {state.stopwatchSessions} stopwatch sessions
                 </div>
               </div>
             </div>

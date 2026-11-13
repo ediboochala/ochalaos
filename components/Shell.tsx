@@ -1,40 +1,49 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/lib/context';
-import { autoInitials, currentPhase } from '@/lib/store';
+import { autoInitials, currentPhase, formatMs } from '@/lib/store';
 import Toast from './Toast';
 import FocusOverlay from './FocusOverlay';
+import Confetti from './Confetti';
+import CommandPalette from './CommandPalette';
 
 const navItems = [
-  { href: '/',           label: 'Dashboard',      icon: '⚡', group: 'Core' },
-  { href: '/daily',      label: 'Daily OS',        icon: '🗓', group: 'Core', badge: true },
-  { href: '/focus',      label: 'Focus Mode',      icon: '🎯', group: 'Core' },
-  { href: '/skills',     label: 'Skill Matrix',    icon: '📐', group: 'Development' },
-  { href: '/clients',    label: 'Client Pipeline', icon: '🤝', group: 'Development' },
-  { href: '/health',     label: 'Health Tracker',  icon: '💪', group: 'Development' },
-  { href: '/milestones', label: 'Milestones',      icon: '🏆', group: 'System' },
-  { href: '/review',     label: 'Weekly Review',   icon: '📊', group: 'System' },
-  { href: '/settings',   label: 'Settings',        icon: '⚙️', group: 'System' },
+  { href: '/',             label: 'Dashboard',      icon: '⚡',  group: 'Core' },
+  { href: '/daily',        label: 'Daily OS',       icon: '🗓',  group: 'Core', badge: true },
+  { href: '/focus',        label: 'Focus Mode',     icon: '🎯',  group: 'Core' },
+  { href: '/stopwatch',    label: 'Stopwatch',      icon: '⏱️',  group: 'Tools' },
+  { href: '/arcade',       label: 'Arcade',         icon: '🕹️',  group: 'Tools' },
+  { href: '/skills',       label: 'Skill Matrix',   icon: '📐',  group: 'Development' },
+  { href: '/clients',      label: 'Client Pipeline',icon: '🤝',  group: 'Development' },
+  { href: '/health',       label: 'Health Tracker', icon: '💪',  group: 'Development' },
+  { href: '/milestones',   label: 'Milestones',     icon: '🏆',  group: 'System' },
+  { href: '/achievements', label: 'Achievements',   icon: '🎖️',  group: 'System' },
+  { href: '/review',       label: 'Weekly Review',  icon: '📊',  group: 'System' },
+  { href: '/settings',     label: 'Settings',       icon: '⚙️',  group: 'System' },
 ];
 
-const groups = ['Core', 'Development', 'System'];
+const groups = ['Core', 'Tools', 'Development', 'System'];
 
 const pageTitles: Record<string, string> = {
-  '/':           'Dashboard',
-  '/daily':      'Daily OS',
-  '/focus':      'Focus Mode',
-  '/skills':     'Skill Matrix',
-  '/clients':    'Client Pipeline',
-  '/health':     'Health Tracker',
-  '/milestones': 'Milestones',
-  '/review':     'Weekly Review',
-  '/settings':   'Settings',
+  '/':             'Dashboard',
+  '/daily':        'Daily OS',
+  '/focus':        'Focus Mode',
+  '/stopwatch':    'Stopwatch',
+  '/arcade':       'Arcade',
+  '/skills':       'Skill Matrix',
+  '/clients':      'Client Pipeline',
+  '/health':       'Health Tracker',
+  '/milestones':   'Milestones',
+  '/achievements': 'Achievements',
+  '/review':       'Weekly Review',
+  '/settings':     'Settings',
 };
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { state } = useApp();
+  const router = useRouter();
+  const { state, stopwatch } = useApp();
 
   const displayName = state.userName || 'My System';
   const initials = state.userInitials || autoInitials(state.userName) || 'OS';
@@ -103,6 +112,19 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <div className="topbar">
           <div className="topbar-title">{pageTitles[pathname] ?? 'PersonalOS'}</div>
           <div className="topbar-right">
+            {stopwatch.running && (
+              <div className="sw-chip" onClick={() => router.push('/stopwatch')} title="Stopwatch is running">
+                ⏱ {formatMs(stopwatch.elapsedMs)}
+              </div>
+            )}
+            <button
+              type="button"
+              className="cmdk-trigger"
+              onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
+              title="Command palette"
+            >
+              <span>Search</span><span className="cmdk-trigger-kbd">⌘K</span>
+            </button>
             <div className="streak-chip">🔥 <span>{state.streak}</span> day streak</div>
             <div className="phase-chip">⚡ Phase {phase.num}: {phase.label}</div>
           </div>
@@ -115,6 +137,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
       <Toast />
       <FocusOverlay />
+      <Confetti />
+      <CommandPalette />
     </div>
   );
 }

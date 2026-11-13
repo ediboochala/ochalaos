@@ -79,6 +79,17 @@ export interface Review {
   next: string;
 }
 
+export interface GameScores {
+  reactionBestMs: number | null;
+  memoryBestMoves: number | null;
+  memoryBestSeconds: number | null;
+  ticTacToeWins: number;
+  ticTacToeLosses: number;
+  ticTacToeDraws: number;
+  mathBestScore: number;
+  mathBestStreak: number;
+}
+
 export interface AppState {
   // Identity
   userName: string;
@@ -125,6 +136,15 @@ export interface AppState {
   leads: Lead[];
   reviews: Review[];
   milestoneChecks: boolean[];
+
+  // Arcade / games
+  gameScores: GameScores;
+
+  // Gamification
+  unlockedAchievements: string[];
+
+  // Stopwatch (sessions logged from the Stopwatch page)
+  stopwatchSessions: number;
 
   // Legacy fields preserved for backward compat
   outreach: number;
@@ -265,6 +285,18 @@ export const defaultState: AppState = {
   leads: [],
   reviews: [],
   milestoneChecks: [],
+  gameScores: {
+    reactionBestMs: null,
+    memoryBestMoves: null,
+    memoryBestSeconds: null,
+    ticTacToeWins: 0,
+    ticTacToeLosses: 0,
+    ticTacToeDraws: 0,
+    mathBestScore: 0,
+    mathBestStreak: 0,
+  },
+  unlockedAchievements: [],
+  stopwatchSessions: 0,
   outreach: 0,
   portfolio: 0,
 };
@@ -364,6 +396,15 @@ export function autoInitials(name: string): string {
   if (parts.length === 0 || !parts[0]) return '';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export function formatMs(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
 export function currentPhase(day: number, targetDuration: number): { label: string; num: number } {
